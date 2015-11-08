@@ -1,11 +1,12 @@
 <?php
-
 /**
- * Simple Autoloader
+ * This file is part of Simple Autoloader
  *
  * @copyright Copyright (c) 2015 Hervé Seignole (herve.seignole@gmail.com)
- * @licence   LGPL
+ * @license   LGPL, please view the LICENSE file.
  */
+
+declare(strict_types=1);
 
 namespace SimpleAutoloader;
 
@@ -32,30 +33,54 @@ class AutoloaderWithCacheFile
 
     /**
      * Set classes cache array.
+     * Provide a fluid interface.
      *
      * @param  array $classes
-     * @return SimpleAutoloaderWithCacheFile
+     * @return AutoloaderWithCacheFile
      */
-    public function setClasses(array $classes)
+    public function setClasses(array $classes): AutoloaderWithCacheFile
     {
         $this->classes = $classes;
         return $this;
     }
 
     /**
+     * Get classes cache array.
+     *
+     * @return array
+     */
+    public function getClasses(): array
+    {
+        return $this->classes;
+    }
+
+    /**
      * Set level of debug.
+     * Provide a fluid interface.
      *
      * @param  int $level Level of debug
      * @return SimpleAutoloaderWithCacheFile
      */
-    public function setDebugLevel(int $level)
+    public function setDebugLevel(int $level): AutoloaderWithCacheFile
     {
         $this->debugLevel = $level;
         return $this;
     }
 
     /**
+     * Get debug level.
+     *
+     * @return int
+     */
+    public function getDebugLevel(): int
+    {
+        return $this->debugLevel;
+    }
+
+    /**
      * Simple autoloader to be use with
+     *
+     * @throw Exception
      */
     public function autoloader(string $class)
     {
