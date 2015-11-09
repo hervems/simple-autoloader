@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+/*
+ * This file is part of Autoload Generator.
+ *
+ * (c) Herve Seignole <herve.seignole@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+require_once __DIR__ . '/src/SimpleAutoloader/CacheGenerator.php';
+
+$cacheGenerator = new \SimpleAutoloader\CacheGenerator($argv);
+if ($cacheGenerator->hasErrors()) {
+    echo $cacheGenerator->getHelpMessage();
+    exit(1);
+}
