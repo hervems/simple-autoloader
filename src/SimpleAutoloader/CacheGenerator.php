@@ -41,9 +41,11 @@ class CacheGenerator
     ];
 
     /**
-     * Has Errors
+     * Errors list
+     *
+     * @var array
      */
-    private $hasErrors = false;
+    private $errors = [];
 
     /**
      * Version
@@ -66,7 +68,7 @@ class CacheGenerator
             $this->run();
         } else {
             $this->helpMessage = $this->help($errors);
-            $this->hasErrors = true;
+            $this->errors = $errors;
         }
     }
 
@@ -81,13 +83,13 @@ class CacheGenerator
     }
 
     /**
-     * Has errors
+     * Get errors list.
      *
-     * @return bool 
+     * @return array
      */
-    public function hasErrors(): bool
+    public function getErrors(): array
     {
-        return $this->hasErrors;
+        return $this->errors;
     }
 
     /**
@@ -100,7 +102,7 @@ class CacheGenerator
         $errors = [];
 
         if (!isset($args[1])) {
-            $errors[] = 'A directory is needed !';
+            $errors[] = 'A directory is needed!';
             return $errors;
         }
 
