@@ -29,7 +29,7 @@ class CacheGenerator
             ],
             '--regexfilter' => [
                 'desc' => '--regexfilter <filter>  Use <filter> expression to find file',
-                'value' => '/^.+\.php/i'
+                'value' => '/^.+\.php$/i'
 
             ]
         ],
