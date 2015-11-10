@@ -62,6 +62,7 @@ class CacheGenerator
      * Constructor
      *
      * @param array $args Arguments.
+     * @return void
      */
     public function __construct(array $args)
     {
@@ -146,6 +147,7 @@ class CacheGenerator
     /**
      * Run cache generation
      *
+     * @return void
      * @throws \Exception Parse error if the file is bad.
      */
     public function run()

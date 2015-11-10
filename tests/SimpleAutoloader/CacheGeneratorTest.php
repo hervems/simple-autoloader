@@ -20,6 +20,8 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
 {
     /**
      * Load Class CacheGenerator.
+     *
+     * @return void
      */
     public function setUp()
     {
@@ -31,6 +33,8 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test __construct method
+     *
+     * @return void
      */
     public function testConstructMethod()
     {

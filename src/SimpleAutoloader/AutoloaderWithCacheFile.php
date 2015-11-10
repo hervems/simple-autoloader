@@ -82,6 +82,7 @@ class AutoloaderWithCacheFile
      * Simple autoloader to be use with.
      *
      * @param string $class A class that we want to find.
+     * @return void
      * @throws \Exception If you are in debugLevel one (File or Class not found).
      */
     public function autoloader(string $class)

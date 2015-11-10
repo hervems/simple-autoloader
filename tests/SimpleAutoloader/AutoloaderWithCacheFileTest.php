@@ -20,6 +20,8 @@ class AutoloaderWithCacheFileTest extends \PHPUnit_Framework_TestCase
 {
     /**
      * Load Class AutoloaderWithCacheFile.
+     *
+     * @return void
      */
     public function setUp()
     {
@@ -31,6 +33,8 @@ class AutoloaderWithCacheFileTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test setter and getter of classes array.
+     *
+     * @return void
      */
     public function testSetGetClassesMethods()
     {
@@ -51,6 +55,8 @@ class AutoloaderWithCacheFileTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test setter and getter of debug level.
+     *
+     * @return void
      */
     public function testSetGetDebugLevelMethods()
     {
@@ -69,6 +75,8 @@ class AutoloaderWithCacheFileTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test autoloader method in classic way with a class exists.
+     *
+     * @return void
      */
     public function testAutoloaderMethodInClassicWay()
     {
@@ -93,6 +101,7 @@ class AutoloaderWithCacheFileTest extends \PHPUnit_Framework_TestCase
      *
      * @expectedException Exception
      * @expectedMessage Class "ClassDoesntExists" not found!
+     * @return void
      */
     public function testAutoloaderMethodWithANonExistentClass()
     {
@@ -113,6 +122,7 @@ class AutoloaderWithCacheFileTest extends \PHPUnit_Framework_TestCase
      *
      * @expectedException Exception
      * @expectedMessage Class "_files/bad-file.php" not found!
+     * @return void
      */
     public function testAutoloaderMethodWithANonExistentFile()
     {
