@@ -4,6 +4,7 @@
  *
  * @copyright Copyright (c) 2015 Hervé Seignole (herve.seignole@gmail.com)
  * @license   LGPL, please view the LICENSE file.
+ * @author    Hervé Seignole <herve.seignole@gmail.com>
  */
 
 declare(strict_types=1);
@@ -60,7 +61,7 @@ class CacheGenerator
     /**
      * Constructor
      *
-     * @param array $args Arguments
+     * @param array $args Arguments.
      */
     public function __construct(array $args)
     {
@@ -95,7 +96,8 @@ class CacheGenerator
     /**
      * Set arguments.
      *
-     * @return array
+     * @param  array $args Arguments.
+     * @return array Return errors list.
      */
     public function setArgs(array $args): array
     {
@@ -106,7 +108,8 @@ class CacheGenerator
             return $errors;
         }
 
-        /* To shift the first args, the program!
+        /*
+         * To shift the first args, the program!
          * Not a bug.
          */
         array_shift($args);
@@ -126,7 +129,7 @@ class CacheGenerator
             /* Parse others args (options) */
             $validOptions = array_keys($this->args['options']);
 
-            for ($position = 0; $position < $length ; $position += 2) {
+            for ($position = 0; $position < $length; $position += 2) {
                 if (!in_array($args[$position], $validOptions)) {
                     $errors[] = 'Option "' . $args[$position] . '" is not valid!';
                 } elseif (strlen($args[$position + 1]) == 0) {
@@ -142,6 +145,8 @@ class CacheGenerator
 
     /**
      * Run cache generation
+     *
+     * @throws \Exception Parse error if the file is bad.
      */
     public function run()
     {
@@ -196,10 +201,12 @@ class CacheGenerator
      * Parse file and search Class, Interface, Trait, Namespace.
      * Populate the classes array.
      *
-     * @param string $file    A PHP file
+     * @param string $file    A PHP file.
      * @param array  $classes An array of (classes => files).
-     * @param bool   $found   Found a new class
-     * @return array Returns $classes modified
+     * @param bool   $found   Found a new class.
+     *
+     * @return array Returns $classes modified.
+     * @throws \Exception If we have conflict, two same classes but in two different file.
      */
     public function parseFile(string $file, array $classes, bool $found): array
     {
@@ -221,7 +228,7 @@ class CacheGenerator
                 $token[0] == 'T_NAMESPACE') {
                 $namespace = '';
 
-                for ($position = $index + 2 ; $position < $length ; ++$position) {
+                for ($position = $index + 2; $position < $length; ++$position) {
                     if (isset($tokens[$position]) &&
                         is_array($tokens[$position])) {
                         $namespace .= $tokens[$position][1];
@@ -274,8 +281,8 @@ class CacheGenerator
     /**
      * Help message
      *
-     * @param  array $errors
-     * @return string
+     * @param  array $errors Errors list.
+     * @return string Return help.
      */
     public function help(array $errors): string
     {
@@ -290,7 +297,7 @@ class CacheGenerator
  
         $return .= '  ' . $this->args['mandatory']['directory']['desc'] . PHP_EOL . PHP_EOL;
 
-        if (count($errors) != 0) {  
+        if (count($errors) != 0) {
             $return .= 'Errors:' . PHP_EOL;
             foreach ($errors as $index => $error) {
                 $return .= '  ' . $index . '. ' . $error . PHP_EOL;
@@ -307,5 +314,4 @@ class CacheGenerator
 
         return $return;
     }
-
 }

@@ -4,6 +4,7 @@
  *
  * @copyright Copyright (c) 2015 Hervé Seignole (herve.seignole@gmail.com)
  * @license   LGPL, please view the LICENSE file.
+ * @author    Hervé Seignole <herve.seignole@gmail.com>
  */
 
 declare(strict_types=1);
@@ -35,8 +36,8 @@ class AutoloaderWithCacheFile
      * Set classes cache array.
      * Provide a fluid interface.
      *
-     * @param  array $classes
-     * @return AutoloaderWithCacheFile
+     * @param  array $classes List of classes.
+     * @return AutoloaderWithCacheFile Provide a fluid interface.
      */
     public function setClasses(array $classes): AutoloaderWithCacheFile
     {
@@ -58,8 +59,8 @@ class AutoloaderWithCacheFile
      * Set level of debug.
      * Provide a fluid interface.
      *
-     * @param  int $level Level of debug
-     * @return SimpleAutoloaderWithCacheFile
+     * @param  int $level Level of debug.
+     * @return SimpleAutoloaderWithCacheFile Provide a fluid interface.
      */
     public function setDebugLevel(int $level): AutoloaderWithCacheFile
     {
@@ -78,24 +79,29 @@ class AutoloaderWithCacheFile
     }
 
     /**
-     * Simple autoloader to be use with
+     * Simple autoloader to be use with.
      *
-     * @throw Exception
+     * @param string $class A class that we want to find.
+     * @throws \Exception If you are in debugLevel one (File or Class not found).
      */
     public function autoloader(string $class)
     {
         if (isset($this->classes[$class])) {
             $file = $this->classes[$class];
             if (file_exists($file)) {
-                require_once $file;
+                try {
+                    require_once $file;
+                } catch (\Throwable $exception) {
+                    throw new \Exception('Parse error for "' . $file . '"!');
+                }
             } else {
                 if ($this->debugLevel == 1) {
-                    throw new \Exception('File "' . $file . '" not found !');
+                    throw new \Exception('File "' . $file . '" not found!');
                 }
             }
         } else {
             if ($this->debugLevel == 1) {
-                throw new \Exception('Class "' . $class . '" not found !');
+                throw new \Exception('Class "' . $class . '" not found!');
             }
         }
     }
