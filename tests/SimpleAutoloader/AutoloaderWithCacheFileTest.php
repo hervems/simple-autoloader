@@ -100,7 +100,7 @@ class AutoloaderWithCacheFileTest extends \PHPUnit_Framework_TestCase
      * Test autoloader method with a non-existent class.
      *
      * @expectedException Exception
-     * @expectedMessage Class "ClassDoesntExists" not found!
+     * @expectedExceptionMessage Class "ClassDoesntExists" not found!
      * @return void
      */
     public function testAutoloaderMethodWithANonExistentClass()
@@ -121,7 +121,7 @@ class AutoloaderWithCacheFileTest extends \PHPUnit_Framework_TestCase
      * Test autoloader method with a non-existent file!
      *
      * @expectedException Exception
-     * @expectedMessage Class "_files/bad-file.php" not found!
+     * @expectedExceptionMessage File "_files/non-existent-file.php" not found!
      * @return void
      */
     public function testAutoloaderMethodWithANonExistentFile()
@@ -129,7 +129,28 @@ class AutoloaderWithCacheFileTest extends \PHPUnit_Framework_TestCase
         $autoload = new AutoloaderWithCacheFile();
 
         $classes = [
-            'ClassOfTestOne' => '_files/bad-file.php'
+            'ClassOfTestOne' => '_files/non-existent-file.php'
+        ];
+
+        $autoload->setClasses($classes)
+            ->setDebugLevel(1);
+
+        $autoload->autoloader('ClassOfTestOne');
+    }
+
+    /**
+     * Test autoloader method with a bad file (parse error)!
+     *
+     * @expectedException Exception
+     * @expectedExceptionMessageRegExp /Parse error for "[^"]*_files\/bad-file\.php" \[syntax error, unexpected '1' \(T_LNUMBER\)\]!$/
+     * @return void
+     */
+    public function testAutoloaderMethodWithABadFile()
+    {
+        $autoload = new AutoloaderWithCacheFile();
+
+        $classes = [
+            'ClassOfTestOne' => __DIR__ . '/_files/bad-file.php'
         ];
 
         $autoload->setClasses($classes)

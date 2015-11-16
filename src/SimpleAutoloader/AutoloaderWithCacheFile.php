@@ -93,7 +93,10 @@ class AutoloaderWithCacheFile
                 try {
                     require_once $file;
                 } catch (\Throwable $exception) {
-                    throw new \Exception('Parse error for "' . $file . '"!');
+                    throw new \Exception(
+                        'Parse error for "' . $file .
+                        '" [' . $exception->getMessage() . ']!'
+                    );
                 }
             } else {
                 if ($this->debugLevel == 1) {

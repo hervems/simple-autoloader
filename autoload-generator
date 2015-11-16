@@ -11,8 +11,9 @@
 
 require_once __DIR__ . '/src/SimpleAutoloader/CacheGenerator.php';
 
-$cacheGenerator = new \SimpleAutoloader\CacheGenerator($argv);
-if (count($cacheGenerator->getErrors()) != 0) {
-    echo $cacheGenerator->getHelpMessage();
+$cacheGenerator = new \SimpleAutoloader\CacheGenerator();
+
+if (count($errors = $cacheGenerator->run($argv)) != 0) {
+    echo $cacheGenerator->help($errors);
     exit(1);
 }

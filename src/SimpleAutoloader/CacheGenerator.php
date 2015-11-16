@@ -49,6 +49,42 @@ class CacheGenerator
     private $errors = [];
 
     /**
+     * Found classes
+     *
+     * @var bool
+     */
+    private $foundClasses = false;
+
+    /**
+     * Read context (file or array via property file)
+     *
+     * @var string
+     */
+    private $readContext = 'file';
+
+    /**
+     * File contains php files for "array" get context.
+     *
+     * @var array
+     */
+    private $files = [];
+
+    /**
+     * Write context (file or array via property file)
+     * for classes cache
+     *
+     * @var string
+     */
+    private $writeContext = 'file';
+
+    /**
+     * classes cache.
+     *
+     * @var array
+     */
+    private $classesCache = [];
+
+    /**
      * Version
      */
     const VERSION = '0.0.1';
@@ -57,32 +93,6 @@ class CacheGenerator
      * Author
      */
     const AUTHOR = 'Hervé Seignole (herve.seignole@gmail.com)';
-
-    /**
-     * Constructor
-     *
-     * @param array $args Arguments.
-     * @return void
-     */
-    public function __construct(array $args)
-    {
-        if (count($errors = $this->setArgs($args)) === 0) {
-            $this->run();
-        } else {
-            $this->helpMessage = $this->help($errors);
-            $this->errors = $errors;
-        }
-    }
-
-    /**
-     * Get help message.
-     *
-     * @return string
-     */
-    public function getHelpMessage(): string
-    {
-        return $this->helpMessage;
-    }
 
     /**
      * Get errors list.
@@ -95,6 +105,62 @@ class CacheGenerator
     }
 
     /**
+     * Get classes cache in write context mode (array).
+     *
+     * @return array
+     */
+    public function getClassesCache(): array
+    {
+        return $this->classesCache;
+    }
+
+    /**
+     * hasFoundClasses
+     *
+     * @return bool
+     */
+    public function hasFoundClasses(): bool
+    {
+        return $this->foundClasses;
+    }
+
+    /**
+     * Set files array.
+     *
+     * @param  array $files Files (key = directory + filename, value = content).
+     * @return CacheGenerator Provide a fluid interface.
+     */
+    public function setFiles(array $files): CacheGenerator
+    {
+        $this->files = $files;
+        return $this;
+    }
+
+    /**
+     * Set read context.
+     *
+     * @param  string $context Context (file or array).
+     * @return CacheGenerator Provide a fluid interface.
+     */
+    public function setReadContext(string $context): CacheGenerator
+    {
+        $this->readContext = $context;
+        return $this;
+    }
+
+    /**
+     * Set write context.
+     *
+     * @param  string $context Context (file or array).
+     * @return CacheGenerator Provide a fluid interface.
+     */
+    public function setWriteContext(string $context): CacheGenerator
+    {
+        $this->writeContext = $context;
+        return $this;
+    }
+
+    /**
      * Set arguments.
      *
      * @param  array $args Arguments.
@@ -104,7 +170,7 @@ class CacheGenerator
     {
         $errors = [];
 
-        if (!isset($args[1])) {
+        if (!isset($args[1]) && $this->readContext == 'file') {
             $errors[] = 'A directory is needed!';
             return $errors;
         }
@@ -115,14 +181,16 @@ class CacheGenerator
          */
         array_shift($args);
 
-        /* shift and set the directory */
-        $directory = array_shift($args);
+        if ($this->readContext == 'file') {
+            /* Shift and set the directory */
+            $directory = array_shift($args);
 
-        if (!is_dir($directory)) {
-            $errors[] = 'Directory "' . $directory . '" does not exists!';
+            if (!is_dir($directory)) {
+                $errors[] = 'Directory "' . $directory . '" does not exists!';
+            }
+
+            $this->args['mandatory']['directory']['value'] = $directory;
         }
-
-        $this->args['mandatory']['directory']['value'] = $directory;
 
         if (($length = count($args)) % 2 != 0) {
             $errors[] = 'Option needs a value!';
@@ -145,76 +213,227 @@ class CacheGenerator
     }
 
     /**
-     * Run cache generation
+     * Scan directory to find PHP files
      *
-     * @return void
-     * @throws \Exception Parse error if the file is bad.
+     * @param  string $directory Directory to be scan.
+     * @param  string $regexp    Regex to filter file.
+     * @return array
+     * @throws \UnexpectedValueException If the path can't be found or isn't a directory.
      */
-    public function run()
-    {
-        $directory = new \RecursiveDirectoryIterator(
-            $this->args['mandatory']['directory']['value']
+    private function scanDirectoryToFindFiles(
+        string $directory,
+        string $regexp
+    ): array {
+        /*
+         * If we are in array context, we use
+         * files array.
+         */
+        if ($this->readContext === 'array') {
+            return array_keys($this->files);
+        }
+
+        /* List of PHP files */
+        $files = [];
+
+        $recursiveDirectoryIterator = new \RecursiveDirectoryIterator(
+            $directory
         );
 
-        $iterator = new \RecursiveIteratorIterator($directory);
+        $iterator = new \RecursiveIteratorIterator(
+            $recursiveDirectoryIterator
+        );
 
         $regex = new \RegexIterator(
             $iterator,
-            $this->args['options']['--regexfilter']['value'],
+            $regexp,
             \RecursiveRegexIterator::GET_MATCH
         );
 
-        $classes = [];
+        foreach ($regex as $file) {
+            if (is_array($file)) {
+                $files[] = $file[0];
+            }
+        }
 
-        $filename = $this->args['options']['--filename']['value'];
+        return $files;
+    }
 
-        if (file_exists($filename)) {
-            try {
-                $classes = include $filename;
-            } catch (\Throwable $exception) {
-                throw new \Exception(
-                    'Parse error when including "' . $filename . '"'
-                );
+    /**
+     * Run cache generation
+     *
+     * @param  array $args Arguments.
+     * @return array Errors list.
+     */
+    public function run(array $args)
+    {
+        $errors = [];
+
+        if (count($errors = $this->setArgs($args)) != 0) {
+            $this->errors = $errors;
+            return $errors;
+        }
+
+        try {
+            $files = $this->scanDirectoryToFindFiles(
+                $this->args['mandatory']['directory']['value'],
+                $this->args['options']['--regexfilter']['value']
+            );
+        } catch (\UnexpectedValueException $exception) {
+            $errors[] = $exception->getMessage();
+            return $errors;
+        }
+
+        if (count($files) != 0) {
+
+            $classes = [];
+            $filename = '';
+
+            if ($this->writeContext == 'file') {
+                $filename = $this->args['options']['--filename']['value'];
+
+                if (file_exists($filename)) {
+                    try {
+                        $classes = include $filename;
+                    } catch (\Throwable $exception) {
+                        $errors[] = 'Parse error when including "' . $filename . '"';
+                        return $errors;
+                    }
+                }
+            } else {
+                $classes = $this->classesCache;
             }
         }
 
         $found = false;
 
-        foreach ($regex as $file) {
-            if (is_array($file)) {
-                list($classes, $found) = $this->parseFile($file[0], $classes, $found);
+        foreach ($files as $file) {
+            $returnParseFile = $this->parseFile($file, $classes, $found);
+            if (count($returnParseFile['errors']) != 0) {
+                return $returnParseFile['errors'];
             }
+            $classes = $returnParseFile['classes'];
+            $found = $returnParseFile['found'];
         }
 
         /* If we found new classes, you need to write a new
          * "classes.php.cache"
          */
         if ($found) {
+
+            if (count($errors = $this->putContent($filename, $classes)) != 0) {
+                return $errors;
+            }
+        }
+
+        $this->foundClasses = $found;
+
+        return $errors;
+    }
+
+    /**
+     * Get Content from filename or file property.
+     *
+     * @param  string $filename File name.
+     * @return string Returns content of file.
+     * @throws \Exception File is not readable.
+     */
+    private function getContent(string $filename): string
+    {
+        $errors = [];
+
+        if ($this->readContext === 'file') {
+            $content = $this->fileGetContents($filename);
+
+            if (!is_string($content)) {
+                throw new \Exception(
+                    'File "' . $filename . '" is not readable!'
+                );
+            }
+
+            return $content;
+        } else {
+            if (isset($this->files[$filename])) {
+                return $this->files[$filename];
+            }
+            return '';
+        }
+    }
+
+    /**
+     * Encapsulate file_get_contents function for test.
+     *
+     * @param  string $filename File name.
+     * @return false|string
+     */
+    private function fileGetContents(string $filename)
+    {
+        return file_get_contents($filename);
+    }
+
+    /**
+     * put content
+     *
+     * @param  string $filename File name.
+     * @param  string $classes Array of classes.
+     * @return array  Errors
+     */
+    private function putContent(string $filename, array $classes): array
+    {
+        $errors = [];
+
+        if ($this->writeContext === 'file') {
+
             $content = '<?php' . "\n" .
                 'return ' .
                 str_replace(['array (', ')'], ['[', ']'], var_export($classes, true)) .
                 ';';
 
-            file_put_contents($filename, $content);
+            $return = $this->filePutContents($filename, $content);
+            if ($return === false) {
+                $errors[] = 'Can write file "' . $filename . '"!';
+            } elseif ($return != strlen($content)) {
+                $errors[] = 'Can\'t write the file "' .
+                    $filename . '" completely! (only ' .
+                    $return . ')';
+            }
+        } else {
+            $this->classesCache = $classes;
         }
+
+        return $errors;
+    }
+
+    /**
+     * Encapsulate file_put_contents function for test.
+     *
+     * @param  string $filename File name.
+     * @param  string $content  Content.
+     * @return false|int
+     */
+    private function filePutContents(string $filename, string $content)
+    {
+        return file_put_contents($filename, $content);
     }
 
     /**
      * Parse file and search Class, Interface, Trait, Namespace.
      * Populate the classes array.
      *
-     * @param string $file    A PHP file.
-     * @param array  $classes An array of (classes => files).
-     * @param bool   $found   Found a new class.
-     *
-     * @return array Returns $classes modified.
-     * @throws \Exception If we have conflict, two same classes but in two different file.
+     * @param  string $file    A PHP file.
+     * @param  array  $classes An array of (classes => files).
+     * @param  bool   $found   Found a new class.
+     * @return array Returns classes modified / errors / found.
      */
     public function parseFile(string $file, array $classes, bool $found): array
     {
         $namespace = '';
 
-        $content = file_get_contents($file);
+        try {
+            $content = $this->getContent($file);
+        } catch (\Exception $exception) {
+            $errors = [$exception->getMessage()];
+            return ['errors' => $errors];
+        }
 
         $tokens = token_get_all($content);
         $length = count($tokens);
@@ -264,10 +483,18 @@ class CacheGenerator
                         }
 
                         if (!isset($classes[$class])) {
-                            $classes[$class] = realpath($file);
+                            if ($this->readContext == 'file') {
+                                $classes[$class] = realpath($file);
+                            } else {
+                                $classes[$class] = $file;
+                            }
                             $found = true;
-                        } elseif ($classes[$class] != realpath($file)) {
-                            throw new \Exception('class "' . $class . '" already load [conflict]');
+                        } elseif (($this->readContext == 'file' &&
+                            $classes[$class] != realpath($file)) ||
+                            ($this->readContext == 'array' &&
+                            $classes[$class] != $file)) {
+                            $errors = ['class "' . $class . '" already load [conflict]'];
+                            return $errors;
                         }
                     }
                 }
@@ -275,8 +502,9 @@ class CacheGenerator
         }
 
         return [
-            $classes,
-            $found
+            'classes' => $classes,
+            'found' => $found,
+            'errors' => []
         ];
     }
 
