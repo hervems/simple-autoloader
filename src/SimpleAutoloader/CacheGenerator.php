@@ -213,6 +213,16 @@ class CacheGenerator
     }
 
     /**
+     * Get arguments.
+     *
+     * @retun array
+     */
+    public function getArgs(): array
+    {
+        return $this->args;
+    }
+
+    /**
      * Scan directory to find PHP files
      *
      * @param  string $directory Directory to be scan.
@@ -235,19 +245,24 @@ class CacheGenerator
         /* List of PHP files */
         $files = [];
 
-        $recursiveDirectoryIterator = new \RecursiveDirectoryIterator(
-            $directory
-        );
+        try {
 
-        $iterator = new \RecursiveIteratorIterator(
-            $recursiveDirectoryIterator
-        );
-
-        $regex = new \RegexIterator(
-            $iterator,
-            $regexp,
-            \RecursiveRegexIterator::GET_MATCH
-        );
+            $recursiveDirectoryIterator = new \RecursiveDirectoryIterator(
+                $directory
+            );
+            
+            $iterator = new \RecursiveIteratorIterator(
+                $recursiveDirectoryIterator
+            );
+            
+            $regex = new \RegexIterator(
+                $iterator,
+                $regexp,
+                \RecursiveRegexIterator::GET_MATCH
+            );
+        } catch (\UnexpectedValueException $exception) {
+            throw $exception;
+        }
 
         foreach ($regex as $file) {
             if (is_array($file)) {
@@ -494,7 +509,7 @@ class CacheGenerator
                             ($this->readContext == 'array' &&
                             $classes[$class] != $file)) {
                             $errors = ['class "' . $class . '" already load [conflict]'];
-                            return $errors;
+                            return ['errors' => $errors];
                         }
                     }
                 }

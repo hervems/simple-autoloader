@@ -30,9 +30,23 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
          */
         require_once ROOT_PATH . '/src/SimpleAutoloader/CacheGenerator.php';
 
-        /* clean classes.php.cache if present */
-        if (file_exists(__DIR__ . '/classes.php.cache')) {
-            unlink(__DIR__ . '/classes.php.cache');
+        $tmpDirectory = sys_get_temp_dir();
+
+        /* Clean classes.php.cache if present */
+        if (file_exists($tmpDirectory . '/classes.php.cache')) {
+            unlink($tmpDirectory . '/classes.php.cache');
+        }
+
+        /* 
+         * Clean directory not readable for
+         * testUnexpectedValueExceptionCatchInRunMethod
+         */
+        $directoryNotReadable = $tmpDirectory .
+            '/SimpleAutoloader.testUnexpectedValueExceptionCatchInRunMethod';
+
+        if (is_dir($directoryNotReadable)) {
+            chmod($directoryNotReadable, 0777);
+            rmdir($directoryNotReadable);
         }
     }
 
@@ -43,9 +57,23 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
      */
     public function tearDown()
     {
-        /* clean classes.php.cache if present */
-        if (file_exists(__DIR__ . '/classes.php.cache')) {
-            unlink(__DIR__ . '/classes.php.cache');
+        $tmpDirectory = sys_get_temp_dir();
+
+        /* Clean classes.php.cache if present */
+        if (file_exists($tmpDirectory . '/classes.php.cache')) {
+            unlink($tmpDirectory . '/classes.php.cache');
+        }
+
+        /* 
+         * Clean directory not readable for
+         * testUnexpectedValueExceptionCatchInRunMethod
+         */
+        $directoryNotReadable = $tmpDirectory .
+            '/SimpleAutoloader.testUnexpectedValueExceptionCatchInRunMethod';
+
+        if (is_dir($directoryNotReadable)) {
+            chmod($directoryNotReadable, 0777);
+            rmdir($directoryNotReadable);
         }
     }
 
@@ -215,6 +243,39 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($classesExpected, $classesCache);
     }
 
+    public function testRunMethodWithTwoSameClassesInDifferentFile()
+    {
+        $args = [
+            0 => 'program'
+        ];
+
+        $cacheGenerator = new CacheGenerator();
+
+        $files = [
+            'file1.php' => '<?php class A {}' . "\n" .
+                'interface B {}' . "\n" .
+                'trait C {}' . "\n",
+            'file2.php' => '<?php class B {}' . "\n" .
+                'class A {}' . "\n" .
+                'interface C {}' . "\n" .
+                'trait D {}' . "\n"
+        ];
+
+        /* Use array read context */
+        $cacheGenerator->setReadContext('array')
+            ->setFiles($files);
+
+        /* Use array write context */
+        $cacheGenerator->setWriteContext('array');
+
+        $errors = $cacheGenerator->run($args);
+
+        $this->assertSame(
+            ['class "B" already load [conflict]'],
+            $errors
+        );
+    }
+
     /**
      * Test help method with zero arg.
      *
@@ -244,7 +305,30 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Test setArgs method with bad parameters
+     * Test setArgs method with bad parameters number.
+     *
+     * @return void
+     */
+    public function testSetArgsMethodWithBadParametersNumber()
+    {
+        $cacheGenerator = new CacheGenerator();
+
+        $args = [
+            0 => 'program',
+            1 => __DIR__ . '/_files/empty-directory',
+            2 => '--filename'
+        ];
+
+        $errors = $cacheGenerator->run($args);
+
+        $this->assertSame(
+            ['Option needs a value!'],
+            $errors
+        );
+    }
+
+    /**
+     * Test setArgs method with bad parameters.
      *
      * @return void
      */
@@ -254,9 +338,105 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
 
         $args = [
             0 => 'program',
-            1 => __DIR__ . '/_files/empty-directory'
+            1 => __DIR__ . '/_files/empty-directory',
+            2 => '--foo',
+            3 => 'bar'
         ];
 
-        $errors = $cacheGenerator->run([]);
+        $errors = $cacheGenerator->run($args);
+
+        $this->assertSame(
+            [
+                'Option "--foo" is not valid!'
+            ],
+            $errors
+        );
+    }
+
+    /**
+     * Test setArgs method with an empty value parameter.
+     *
+     * @return void
+     */
+    public function testSetArgsMethodWithAnEmptyValueParameter()
+    {
+        $cacheGenerator = new CacheGenerator();
+
+        $args = [
+            0 => 'program',
+            1 => __DIR__ . '/_files/empty-directory',
+            2 => '--filename',
+            3 => ''
+        ];
+
+        $errors = $cacheGenerator->run($args);
+
+        $this->assertSame(
+            [
+                'Option value of "--filename" is empty!'
+            ],
+            $errors
+        );
+    }
+
+    /**
+     * Test setArgs method with a good value parameter.
+     *
+     * @return void
+     */
+    public function testSetArgsMethodWithAGoodValueParameter()
+    {
+        $cacheGenerator = new CacheGenerator();
+
+        $args = [
+            0 => 'program',
+            1 => __DIR__ . '/_files/empty-directory',
+            2 => '--filename',
+            3 => 'myfile.php'
+        ];
+
+        $errors = $cacheGenerator->setArgs($args);
+
+        $this->assertCount(0, $errors);
+
+        $this->assertSame(
+            'myfile.php',
+            $cacheGenerator->getArgs($args)['options']['--filename']['value']
+        );
+    }
+
+    /**
+     * Test UnexpectedValueException catch in run method.
+     *
+     * @return void
+     */
+    public function testUnexpectedValueExceptionCatchInRunMethod()
+    {
+        $cacheGenerator = new CacheGenerator();
+
+        $directoryNotReadable = sys_get_temp_dir() .
+            '/SimpleAutoloader.testUnexpectedValueExceptionCatchInRunMethod';
+
+        if (is_dir($directoryNotReadable)) {
+            chmod($directoryNotReadable, 0777);
+            rmdir($directoryNotReadable);
+        }
+
+        mkdir($directoryNotReadable, 0);
+
+        $args = [
+            0 => 'program',
+            1 => $directoryNotReadable
+        ];
+
+        $errors = $cacheGenerator->run($args);
+
+        $this->assertSame(
+            'RecursiveDirectoryIterator::__construct(' .
+            sys_get_temp_dir() . DIRECTORY_SEPARATOR .
+            'SimpleAutoloader.testUnexpectedValueExceptionCatchInRunMethod): ' .
+            'failed to open dir: Permission denied',
+            $errors[0]
+        );
     }
 }
