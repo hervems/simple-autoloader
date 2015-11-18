@@ -19,7 +19,7 @@ use SimpleAutoloader\CacheGenerator;
 class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
 {
     /**
-     * Load Class CacheGenerator.
+     * Load Class CacheGenerator and clean some files.
      *
      * @return void
      */
@@ -48,10 +48,22 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             chmod($directoryNotReadable, 0777);
             rmdir($directoryNotReadable);
         }
+
+        /* 
+         * Clean file not readable for
+         * testParseFileMethodReturnsErrorWhenAFileIsNotReadable
+         */
+        $fileNotReadable = $tmpDirectory .
+            '/SimpleAutoloader.testParseFileMethodReturnsErrorWhenAFileIsNotReadable';
+
+        if (file_exists($fileNotReadable)) {
+            chmod($fileNotReadable, 0777);
+            unlink($fileNotReadable);
+        }
     }
 
     /**
-     * Clean classes.php.cache file.
+     * Clean some files.
      *
      * @return void
      */
@@ -74,6 +86,18 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
         if (is_dir($directoryNotReadable)) {
             chmod($directoryNotReadable, 0777);
             rmdir($directoryNotReadable);
+        }
+
+        /* 
+         * Clean file not readable for
+         * testParseFileMethodReturnsErrorWhenAFileIsNotReadable
+         */
+        $fileNotReadable = $tmpDirectory .
+            '/SimpleAutoloader.testParseFileMethodReturnsErrorWhenAFileIsNotReadable';
+
+        if (file_exists($fileNotReadable)) {
+            chmod($fileNotReadable, 0777);
+            unlink($fileNotReadable);
         }
     }
 
@@ -414,7 +438,9 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
     {
         $cacheGenerator = new CacheGenerator();
 
-        $directoryNotReadable = sys_get_temp_dir() .
+        $tmpDirectory = sys_get_temp_dir();
+
+        $directoryNotReadable = $tmpDirectory .
             '/SimpleAutoloader.testUnexpectedValueExceptionCatchInRunMethod';
 
         if (is_dir($directoryNotReadable)) {
@@ -433,10 +459,68 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSame(
             'RecursiveDirectoryIterator::__construct(' .
-            sys_get_temp_dir() . DIRECTORY_SEPARATOR .
+            $tmpDirectory . DIRECTORY_SEPARATOR .
             'SimpleAutoloader.testUnexpectedValueExceptionCatchInRunMethod): ' .
             'failed to open dir: Permission denied',
             $errors[0]
         );
+    }
+
+    /**
+     * Test parseFile method returns error when a file does not exists.
+     *
+     * @return void
+     */
+    public function testParseFileMethodReturnsErrorWhenAFileDoesNotExists()
+    {
+        $cacheGenerator = new CacheGenerator();
+
+        $error = $cacheGenerator->parseFile(
+            __DIR__ . '/_files/no-file.php',
+            [],
+            false
+        )['errors'][0];
+
+        $expectedError = 'file_get_contents(' .
+            __DIR__ .
+            '/_files/no-file.php): failed to open stream: No such file or directory';
+
+        $this->assertSame($expectedError, $error);
+    }
+
+    /**
+     * Test parseFile method returns error when a file does not exists.
+     *
+     * @return void
+     */
+    public function testParseFileMethodReturnsErrorWhenAFileIsNotReadable()
+    {
+        $cacheGenerator = new CacheGenerator();
+
+        $tmpDirectory = sys_get_temp_dir();
+
+        $fileNotReadable = $tmpDirectory .
+            '/SimpleAutoloader.testParseFileMethodReturnsErrorWhenAFileIsNotReadable.php';
+
+        if (file_exists($fileNotReadable)) {
+            chmod($fileNotReadable, 0777);
+            unlink($fileNotReadable);
+        }
+
+        file_put_contents($fileNotReadable, '');
+        chmod($fileNotReadable, 0);
+
+        $error = $cacheGenerator->parseFile(
+            $tmpDirectory .
+            '/SimpleAutoloader.testParseFileMethodReturnsErrorWhenAFileIsNotReadable.php',
+            [],
+            false
+        )['errors'][0];
+
+        $expectedError = 'file_get_contents(' .
+            $fileNotReadable .
+            '): failed to open stream: Permission denied';
+
+        $this->assertSame($expectedError, $error);
     }
 }
