@@ -523,4 +523,31 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
 
         $this->assertSame($expectedError, $error);
     }
+
+    /**
+     * Test run method with a specific filename
+     *
+     * @return void
+     */
+    public function testRunMethodWithASpecificFile()
+    {
+        $cacheGenerator = new CacheGenerator();
+
+        $classCacheFilename = __DIR__ . '/_files/bad-cache.php.cache';
+
+        $args = [
+            'program',
+            __DIR__ . '/_files/non-empty-directory',
+            '--filename',
+            $classCacheFilename
+        ];
+
+        $errors = $cacheGenerator->run($args);
+
+        $this->assertCount(1, $errors);
+        $this->assertSame(
+            ['Parse error when including "' . $classCacheFilename . '"'],
+            $errors
+        );
+    }
 }
