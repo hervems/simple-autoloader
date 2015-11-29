@@ -693,6 +693,8 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
         ];
 
         $this->assertSame($expectedError, $errors[0]);
+
+        chmod($filename, 0400);
     }
 
     /**
