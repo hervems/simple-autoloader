@@ -9,94 +9,11 @@
  * file that was distributed with this source code.
  */
 
-if (!isset($argv[1])) {
-    echo 'autoload.generator 0.0.1 by Herve Seignole.', "\n\n";
+require_once __DIR__ . '/src/SimpleAutoloader/CacheGenerator.php';
 
-    echo 'Usage:', "\n";
-    echo '    autoload-generator directory', "\n";
+$cacheGenerator = new \SimpleAutoloader\CacheGenerator();
+
+if (count($errors = $cacheGenerator->run($argv)) != 0) {
+    echo $cacheGenerator->help($errors);
     exit(1);
-}
-
-$directory = $argv[1];
-
-if (!is_dir($directory)) {
-    throw new Exception('Directory does not exists!');
-}
-
-$directory = new RecursiveDirectoryIterator($directory);
-$iterator = new RecursiveIteratorIterator($directory);
-$regex = new RegexIterator($iterator, '/^.+\.php$/i', RecursiveRegexIterator::GET_MATCH);
-
-$classes = [];
-
-if (file_exists('classes.php.cache')) {
-    $classes = include('classes.php.cache');
-}
-
-$found = false;
-
-foreach ($regex as $file) {
-    if (is_array($file)) {
-        $namespace = '';
-        $content = file_get_contents($file[0]);
-        $tokens = token_get_all($content);
-        $length = count($tokens);
-        foreach ($tokens as $index => $token) {
-
-            if (is_array($token)) {
-                $token[0] = token_name($token[0]);
-            }
-
-            if (is_array($token) &&
-                $token[0] == 'T_NAMESPACE') {
-                $namespace = '';
-                for ($position = $index + 2 ; $position < $length ; ++$position) {
-                    if (isset($tokens[$position]) &&
-                        is_array($tokens[$position])) {
-                        $namespace .= $tokens[$position][1];
-                    } elseif (isset($tokens[$position]) &&
-                        is_string($tokens[$position]) &&
-                        $tokens[$position] === ';') {
-                        break;
-                    }
-                }
-            }
-
-            if (is_array($token) &&
-                ($token[0] == 'T_CLASS' ||
-                $token[0] == 'T_INTERFACE' ||
-                $token[0] == 'T_TRAIT')) {
-
-                /* bypass token whitespace */
-                if (isset($tokens[$index + 1]) &&
-                    is_array($tokens[$index + 1]) &&
-                    $tokens[$index + 1][0] == T_WHITESPACE) {
-                    if (isset($tokens[$index + 2]) &&
-                        is_array($tokens[$index + 2]) &&
-                        $tokens[$index + 2][0] == T_STRING) {
-                        $class = $tokens[$index + 2][1];
-
-                        if ($namespace != '') {
-                            $class = $namespace . '\\' . $class;
-                        }
-
-                        if (!isset($classes[$class])) {
-                            $classes[$class] = realpath($file[0]);
-                            $found = true;
-                        } elseif ($classes[$class] != realpath($file[0])) {
-                            throw new Exception('class "' . $class . '" already load [conflict]');
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-if ($found) {
-    $content = '<?php' . "\n" .
-        'return ' .
-        str_replace(['array (', ')'], ['[', ']'], var_export($classes, true)) .
-        ';';
-    file_put_contents('classes.php.cache', $content);
 }
