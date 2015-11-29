@@ -19,6 +19,13 @@ use SimpleAutoloader\CacheGenerator;
 class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
 {
     /**
+     * Path and file of CacheGenerator class.
+     *
+     * @var string
+     */
+    private $fileOfCacheGeneratorClass;
+
+    /**
      * Load Class CacheGenerator and clean some files.
      *
      * @return void
@@ -26,9 +33,18 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
     public function setUp()
     {
         /*
+         * Fill path and file of CacheGenerator class for
+         * test when we have errors.
+         */
+        $this->fileOfCacheGeneratorClass = ROOT_PATH .
+            DIRECTORY_SEPARATOR . 'src' .
+            DIRECTORY_SEPARATOR . 'SimpleAutoloader' .
+            DIRECTORY_SEPARATOR . 'CacheGenerator.php';
+
+        /*
          * No autoloader for the tests, so we use require.
          */
-        require_once ROOT_PATH . '/src/SimpleAutoloader/CacheGenerator.php';
+        require_once $this->fileOfCacheGeneratorClass; 
 
         $tmpDirectory = sys_get_temp_dir();
 
@@ -112,11 +128,14 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
         $errors = $cacheGenerator->run([]);
         $this->assertCount(1, $errors);
         
-        $expectedErrors = [
-            'A directory is needed!'
+        $expectedError = [
+            'errorNumber' => 0,
+            'errorString' => 'A directory is needed!',
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 178
         ];
 
-        $this->assertSame($expectedErrors, $errors);
+        $this->assertSame($expectedError, $errors[0]);
     }
 
     /**
@@ -137,7 +156,14 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
 
         $this->assertCount(1, $errors);
 
-        $this->assertSame('Directory "' . $args[1] . '" does not exists!', $errors[0]);
+        $expectedError = [
+            'errorNumber' => 0,
+            'errorString' => 'Directory "' . $args[1] . '" does not exists!',
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 198
+        ];
+
+        $this->assertSame($expectedError, $errors[0]);
 
         $errorsViaGetErrors = $cacheGenerator->getErrors();
         $this->assertCount(1, $errorsViaGetErrors);
@@ -292,12 +318,16 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
         /* Use array write context */
         $cacheGenerator->setWriteContext('array');
 
+        $expectedError = [
+            'errorNumber' => 0,
+            'errorString' => 'class "B" already load [conflict]',
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 594
+        ];
+
         $errors = $cacheGenerator->run($args);
 
-        $this->assertSame(
-            ['class "B" already load [conflict]'],
-            $errors
-        );
+        $this->assertSame($expectedError, $errors[0]);
     }
 
     /**
@@ -343,12 +373,16 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             2 => '--filename'
         ];
 
+        $expectedError = [
+            'errorNumber' => 0,
+            'errorString' => 'Option needs a value!',
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 210
+        ];
+
         $errors = $cacheGenerator->run($args);
 
-        $this->assertSame(
-            ['Option needs a value!'],
-            $errors
-        );
+        $this->assertSame($expectedError, $errors[0]);
     }
 
     /**
@@ -367,14 +401,16 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             3 => 'bar'
         ];
 
+        $expectedError = [
+            'errorNumber' => 0,
+            'errorString' => 'Option "--foo" is not valid!',
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 222
+        ];
+
         $errors = $cacheGenerator->run($args);
 
-        $this->assertSame(
-            [
-                'Option "--foo" is not valid!'
-            ],
-            $errors
-        );
+        $this->assertSame($expectedError, $errors[0]);
     }
 
     /**
@@ -393,14 +429,16 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             3 => ''
         ];
 
+        $expectedError = [
+            'errorNumber' => 0,
+            'errorString' => 'Option value of "--filename" is empty!',
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 229
+        ];
+
         $errors = $cacheGenerator->run($args);
 
-        $this->assertSame(
-            [
-                'Option value of "--filename" is empty!'
-            ],
-            $errors
-        );
+        $this->assertSame($expectedError, $errors[0]);
     }
 
     /**
@@ -455,15 +493,21 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             1 => $directoryNotReadable
         ];
 
-        $errors = $cacheGenerator->run($args);
-
-        $this->assertSame(
-            'RecursiveDirectoryIterator::__construct(' .
+        $errorMessage = 'RecursiveDirectoryIterator::__construct(' .
             $tmpDirectory . DIRECTORY_SEPARATOR .
             'SimpleAutoloader.testUnexpectedValueExceptionCatchInRunMethod): ' .
-            'failed to open dir: Permission denied',
-            $errors[0]
-        );
+            'failed to open dir: Permission denied';
+
+        $expectedError = [
+            'errorNumber' => 0,
+            'errorString' => $errorMessage,
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 326
+        ];
+
+        $errors = $cacheGenerator->run($args);
+
+        $this->assertSame($expectedError, $errors[0]);
     }
 
     /**
@@ -481,9 +525,16 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             false
         )['errors'][0];
 
-        $expectedError = 'file_get_contents(' .
+        $errorMessage = 'file_get_contents(' .
             __DIR__ .
             '/_files/no-file.php): failed to open stream: No such file or directory';
+
+        $expectedError = [
+            'errorNumber' => 2,
+            'errorString' => $errorMessage,
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 446
+        ];
 
         $this->assertSame($expectedError, $error);
     }
@@ -517,9 +568,16 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             false
         )['errors'][0];
 
-        $expectedError = 'file_get_contents(' .
+        $errorMessage = 'file_get_contents(' .
             $fileNotReadable .
             '): failed to open stream: Permission denied';
+
+        $expectedError = [
+            'errorNumber' => 2,
+            'errorString' => $errorMessage,
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 446
+        ];
 
         $this->assertSame($expectedError, $error);
     }
@@ -545,9 +603,121 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
         $errors = $cacheGenerator->run($args);
 
         $this->assertCount(1, $errors);
-        $this->assertSame(
-            ['Parse error when including "' . $classCacheFilename . '"'],
-            $errors
-        );
+
+        $expectedError = [
+            'errorNumber' => 0,
+            'errorString' => 'Parse error when including "' . $classCacheFilename . '"',
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 351
+        ];
+
+        $this->assertSame($expectedError, $errors[0]);
+    }
+
+    /**
+     * Test run method with an error when writing content in
+     * classes cache.
+     *
+     * @return void
+     */
+    public function testRunMethodWithAnErrorWhenWritingContentInClassesCache()
+    {
+        $filename = __DIR__ . '/_files/read-only-file.php';
+
+        chmod($filename, 0444);
+
+        $args = [
+            0 => 'program',
+            1 => __DIR__ . '/_files/non-empty-directory',
+            2 => '--filename',
+            3 => $filename
+        ];
+
+        $cacheGenerator = new CacheGenerator();
+
+        $errors = $cacheGenerator->run($args);
+
+        $this->assertTrue($cacheGenerator->hasFoundClasses());
+
+        $this->assertCount(1, $errors);
+
+        $errorMessage = 'file_put_contents(' .
+            $filename .
+            '): failed to open stream: Permission denied';
+
+        $expectedError = [
+            'errorNumber' => 2,
+            'errorString' => $errorMessage,
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 506
+        ];
+
+        $this->assertSame($expectedError, $errors[0]);
+    }
+
+    /**
+     * Test run method with an error when writing content in
+     * classes cache.
+     *
+     * @return void
+     */
+    public function testRunMethodWithAnUnreadableFile()
+    {
+        $filename = __DIR__ .
+            '/_files/' .
+            'directory-with-an-unreadable-file' .
+            '/unreadable-file.php';
+
+        chmod($filename, 0);
+
+        $args = [
+            0 => 'program',
+            1 => __DIR__ . '/_files/directory-with-an-unreadable-file',
+        ];
+
+        $cacheGenerator = new CacheGenerator();
+
+        $errors = $cacheGenerator->run($args);
+
+        $this->assertCount(1, $errors);
+
+        $errorMessage = 'file_get_contents(' .
+            $filename .
+            '): failed to open stream: Permission denied';
+
+        $expectedError = [
+            'errorNumber' => 2,
+            'errorString' => $errorMessage,
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 446
+        ];
+
+        $this->assertSame($expectedError, $errors[0]);
+    }
+
+    /**
+     *
+     * @return void
+     */
+    public function testParseFileMethodWithAnNonExistantVirtualFile()
+    {
+        $cacheGenerator = new CacheGenerator();
+        $cacheGenerator->setReadContext('array');
+        $errors = $cacheGenerator->parseFile('unknownfile.php', [], false);
+
+        $errors = $errors['errors'];
+
+        $this->assertCount(1, $errors);
+
+        $errorMessage = 'File "unknownfile.php" doesn\'t exists!';
+
+        $expectedError = [
+            'errorNumber' => 0,
+            'errorString' => $errorMessage,
+            'errorFile' => $this->fileOfCacheGeneratorClass,
+            'errorLine' => 414
+        ];
+
+        $this->assertSame($expectedError, $errors[0]);
     }
 }

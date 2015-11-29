@@ -171,7 +171,12 @@ class CacheGenerator
         $errors = [];
 
         if (!isset($args[1]) && $this->readContext == 'file') {
-            $errors[] = 'A directory is needed!';
+            $errors[] = [
+                'errorNumber' => 0,
+                'errorString' => 'A directory is needed!',
+                'errorFile' => __FILE__,
+                'errorLine' => __LINE__
+            ];
             return $errors;
         }
 
@@ -186,23 +191,43 @@ class CacheGenerator
             $directory = array_shift($args);
 
             if (!is_dir($directory)) {
-                $errors[] = 'Directory "' . $directory . '" does not exists!';
+                $errors[] = [
+                    'errorNumber' => 0,
+                    'errorString' => 'Directory "' . $directory . '" does not exists!',
+                    'errorFile' => __FILE__,
+                    'errorLine' => __LINE__
+                ];
             }
 
             $this->args['mandatory']['directory']['value'] = $directory;
         }
 
         if (($length = count($args)) % 2 != 0) {
-            $errors[] = 'Option needs a value!';
+            $errors[] = [
+                'errorNumber' => 0,
+                'errorString' => 'Option needs a value!',
+                'errorFile' => __FILE__,
+                'errorLine' => __LINE__
+            ];
         } else {
             /* Parse others args (options) */
             $validOptions = array_keys($this->args['options']);
 
             for ($position = 0; $position < $length; $position += 2) {
                 if (!in_array($args[$position], $validOptions)) {
-                    $errors[] = 'Option "' . $args[$position] . '" is not valid!';
+                    $errors[] = [
+                        'errorNumber' => 0,
+                        'errorString' => 'Option "' . $args[$position] . '" is not valid!',
+                        'errorFile' => __FILE__,
+                        'errorLine' => __LINE__
+                    ];
                 } elseif (strlen($args[$position + 1]) == 0) {
-                    $errors[] = 'Option value of "' . $args[$position] . '" is empty!';
+                    $errors[] = [
+                        'errorNumber' => 0,
+                        'errorString' => 'Option value of "' . $args[$position] . '" is empty!',
+                        'errorFile' => __FILE__,
+                        'errorLine' => __LINE__
+                    ];
                 } else {
                     $this->args['options'][$args[$position]]['value'] = $args[$position + 1];
                 }
@@ -294,7 +319,12 @@ class CacheGenerator
                 $this->args['options']['--regexfilter']['value']
             );
         } catch (\UnexpectedValueException $exception) {
-            $errors[] = $exception->getMessage();
+            $errors[] = [
+                'errorNumber' => 0,
+                'errorString' => $exception->getMessage(),
+                'errorFile' => __FILE__,
+                'errorLine' => __LINE__
+            ];
             return $errors;
         }
 
@@ -309,8 +339,17 @@ class CacheGenerator
                 if (file_exists($filename)) {
                     try {
                         $classes = include $filename;
+
+                        if ($classes === 1) {
+                            $classes = [];
+                        }
                     } catch (\Throwable $exception) {
-                        $errors[] = 'Parse error when including "' . $filename . '"';
+                        $errors[] = [
+                            'errorNumber' => 0,
+                            'errorString' => 'Parse error when including "' . $filename . '"',
+                            'errorFile' => __FILE__,
+                            'errorLine' => __LINE__
+                        ];
                         return $errors;
                     }
                 }
@@ -330,6 +369,8 @@ class CacheGenerator
             $found = $returnParseFile['found'];
         }
 
+        $this->foundClasses = $found;
+
         /* If we found new classes, you need to write a new
          * "classes.php.cache"
          */
@@ -340,8 +381,6 @@ class CacheGenerator
             }
         }
 
-        $this->foundClasses = $found;
-
         return $errors;
     }
 
@@ -349,28 +388,33 @@ class CacheGenerator
      * Get Content from filename or file property.
      *
      * @param  string $filename File name.
-     * @return string Returns content of file.
-     * @throws \Exception File is not readable.
+     * @return array Returns content of file and errors.
      */
-    private function getContent(string $filename): string
+    private function getContent(string $filename): array
     {
         $errors = [];
 
         if ($this->readContext === 'file') {
-            $content = $this->fileGetContents($filename);
-
-            if (!is_string($content)) {
-                throw new \Exception(
-                    'File "' . $filename . '" is not readable!'
-                );
-            }
-
-            return $content;
+            return $this->fileGetContents($filename);
         } else {
             if (isset($this->files[$filename])) {
-                return $this->files[$filename];
+                return [
+                    'content' => $this->files[$filename],
+                    'errors' => []
+                ];
             }
-            return '';
+
+            return [
+                'content' => '',
+                'errors' => [
+                    [
+                        'errorNumber' => 0,
+                        'errorString' => 'File "' . $filename . '" doesn\'t exists!',
+                        'errorFile' => __FILE__,
+                        'errorLine' => __LINE__
+                    ]
+                ]
+            ];
         }
     }
 
@@ -378,11 +422,33 @@ class CacheGenerator
      * Encapsulate file_get_contents function for test.
      *
      * @param  string $filename File name.
-     * @return false|string
+     * @return array
      */
-    private function fileGetContents(string $filename)
+    private function fileGetContents(string $filename): array
     {
-        return file_get_contents($filename);
+        $errors = [];
+
+        set_error_handler(
+            function(
+                $errorNumber,
+                $errorString,
+                $errorFile,
+                $errorLine,
+                array $errcontext) use (&$errors) {
+                $errors[] = [
+                    'errorNumber' => $errorNumber,
+                    'errorString' => $errorString,
+                    'errorFile' => $errorFile,
+                    'errorLine' => $errorLine
+                ];
+            }
+        );
+        $content = file_get_contents($filename);
+        restore_error_handler();
+        return [
+            'content' => (string) $content,
+            'errors' => $errors
+        ];
     }
 
     /**
@@ -402,15 +468,8 @@ class CacheGenerator
                 'return ' .
                 str_replace(['array (', ')'], ['[', ']'], var_export($classes, true)) .
                 ';';
+            $errors = $this->filePutContents($filename, $content);
 
-            $return = $this->filePutContents($filename, $content);
-            if ($return === false) {
-                $errors[] = 'Can write file "' . $filename . '"!';
-            } elseif ($return != strlen($content)) {
-                $errors[] = 'Can\'t write the file "' .
-                    $filename . '" completely! (only ' .
-                    $return . ')';
-            }
         } else {
             $this->classesCache = $classes;
         }
@@ -423,11 +482,30 @@ class CacheGenerator
      *
      * @param  string $filename File name.
      * @param  string $content  Content.
-     * @return false|int
+     * @return array
      */
-    private function filePutContents(string $filename, string $content)
+    private function filePutContents(string $filename, string $content): array
     {
-        return file_put_contents($filename, $content);
+        $errors = [];
+
+        set_error_handler(
+            function(
+                $errorNumber,
+                $errorString,
+                $errorFile,
+                $errorLine,
+                array $errcontext) use (&$errors) {
+                $errors[] = [
+                    'errorNumber' => $errorNumber,
+                    'errorString' => $errorString,
+                    'errorFile' => $errorFile,
+                    'errorLine' => $errorLine
+                ];
+            }
+        );
+        file_put_contents($filename, $content);
+        restore_error_handler();
+        return $errors;
     }
 
     /**
@@ -443,12 +521,13 @@ class CacheGenerator
     {
         $namespace = '';
 
-        try {
-            $content = $this->getContent($file);
-        } catch (\Exception $exception) {
-            $errors = [$exception->getMessage()];
+        $contentAndErrors = $this->getContent($file);
+
+        if (count($errors = $contentAndErrors['errors']) != 0) {
             return ['errors' => $errors];
         }
+
+        $content = $contentAndErrors['content'];
 
         $tokens = token_get_all($content);
         $length = count($tokens);
@@ -508,7 +587,12 @@ class CacheGenerator
                             $classes[$class] != realpath($file)) ||
                             ($this->readContext == 'array' &&
                             $classes[$class] != $file)) {
-                            $errors = ['class "' . $class . '" already load [conflict]'];
+                            $errors[] = [
+                                'errorNumber' => 0,
+                                'errorString' => 'class "' . $class . '" already load [conflict]',
+                                'errorFile' => __FILE__,
+                                'errorLine' => __LINE__
+                            ];
                             return ['errors' => $errors];
                         }
                     }
@@ -545,7 +629,7 @@ class CacheGenerator
         if (count($errors) != 0) {
             $return .= 'Errors:' . PHP_EOL;
             foreach ($errors as $index => $error) {
-                $return .= '  ' . $index . '. ' . $error . PHP_EOL;
+                $return .= '  ' . $index . '. ' . $error['errorString'] . PHP_EOL;
             }
             $return .= PHP_EOL;
         }
