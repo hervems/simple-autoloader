@@ -115,6 +115,17 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             chmod($fileNotReadable, 0777);
             unlink($fileNotReadable);
         }
+
+        /*
+         * user+read for 
+         * testRunMethodWithAnUnreadableFile
+         */
+        $filename = __DIR__ .
+            '/_files/' .
+            'directory-with-an-unreadable-file' .
+            '/unreadable-file.php';
+
+        chmod($filename, 0400);
     }
 
     /**
@@ -327,7 +338,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             'errorNumber' => 0,
             'errorString' => 'class "B" already load [conflict]',
             'errorFile' => $this->fileOfCacheGeneratorClass,
-            'errorLine' => 594
+            'errorLine' => 596
         ];
 
         $errors = $cacheGenerator->run($args);
@@ -538,7 +549,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             'errorNumber' => 2,
             'errorString' => $errorMessage,
             'errorFile' => $this->fileOfCacheGeneratorClass,
-            'errorLine' => 446
+            'errorLine' => 447
         ];
 
         $this->assertSame($expectedError, $error);
@@ -581,7 +592,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             'errorNumber' => 2,
             'errorString' => $errorMessage,
             'errorFile' => $this->fileOfCacheGeneratorClass,
-            'errorLine' => 446
+            'errorLine' => 447
         ];
 
         $this->assertSame($expectedError, $error);
@@ -654,7 +665,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             'errorNumber' => 2,
             'errorString' => $errorMessage,
             'errorFile' => $this->fileOfCacheGeneratorClass,
-            'errorLine' => 506
+            'errorLine' => 508
         ];
 
         $this->assertSame($expectedError, $errors[0]);
@@ -694,7 +705,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             'errorNumber' => 2,
             'errorString' => $errorMessage,
             'errorFile' => $this->fileOfCacheGeneratorClass,
-            'errorLine' => 446
+            'errorLine' => 447
         ];
 
         $this->assertSame($expectedError, $errors[0]);
