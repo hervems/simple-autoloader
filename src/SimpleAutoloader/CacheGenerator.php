@@ -240,7 +240,7 @@ class CacheGenerator
     /**
      * Get arguments.
      *
-     * @retun array
+     * @return array
      */
     public function getArgs(): array
     {
@@ -429,12 +429,13 @@ class CacheGenerator
         $errors = [];
 
         set_error_handler(
-            function(
+            function (
                 $errorNumber,
                 $errorString,
                 $errorFile,
                 $errorLine,
-                array $errcontext) use (&$errors) {
+                array $errcontext
+            ) use (&$errors) {
                 $errors[] = [
                     'errorNumber' => $errorNumber,
                     'errorString' => $errorString,
@@ -455,7 +456,7 @@ class CacheGenerator
      * put content
      *
      * @param  string $filename File name.
-     * @param  string $classes Array of classes.
+     * @param  array  $classes  Array of classes.
      * @return array  Errors
      */
     private function putContent(string $filename, array $classes): array
@@ -489,12 +490,13 @@ class CacheGenerator
         $errors = [];
 
         set_error_handler(
-            function(
+            function (
                 $errorNumber,
                 $errorString,
                 $errorFile,
                 $errorLine,
-                array $errcontext) use (&$errors) {
+                array $errcontext
+            ) use (&$errors) {
                 $errors[] = [
                     'errorNumber' => $errorNumber,
                     'errorString' => $errorString,

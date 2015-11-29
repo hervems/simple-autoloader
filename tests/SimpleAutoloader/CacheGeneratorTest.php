@@ -44,7 +44,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
         /*
          * No autoloader for the tests, so we use require.
          */
-        require_once $this->fileOfCacheGeneratorClass; 
+        require_once $this->fileOfCacheGeneratorClass;
 
         $tmpDirectory = sys_get_temp_dir();
 
@@ -53,7 +53,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             unlink($tmpDirectory . '/classes.php.cache');
         }
 
-        /* 
+        /*
          * Clean directory not readable for
          * testUnexpectedValueExceptionCatchInRunMethod
          */
@@ -65,7 +65,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             rmdir($directoryNotReadable);
         }
 
-        /* 
+        /*
          * Clean file not readable for
          * testParseFileMethodReturnsErrorWhenAFileIsNotReadable
          */
@@ -92,7 +92,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             unlink($tmpDirectory . '/classes.php.cache');
         }
 
-        /* 
+        /*
          * Clean directory not readable for
          * testUnexpectedValueExceptionCatchInRunMethod
          */
@@ -104,7 +104,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
             rmdir($directoryNotReadable);
         }
 
-        /* 
+        /*
          * Clean file not readable for
          * testParseFileMethodReturnsErrorWhenAFileIsNotReadable
          */
@@ -127,7 +127,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
         $cacheGenerator = new CacheGenerator();
         $errors = $cacheGenerator->run([]);
         $this->assertCount(1, $errors);
-        
+
         $expectedError = [
             'errorNumber' => 0,
             'errorString' => 'A directory is needed!',
@@ -293,6 +293,11 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($classesExpected, $classesCache);
     }
 
+    /**
+     * Test run method with two same classes in different file.
+     *
+     * @return void
+     */
     public function testRunMethodWithTwoSameClassesInDifferentFile()
     {
         $args = [
@@ -698,6 +703,7 @@ class CacheGeneratorTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test parseFile method with an non existant virtual file.
      *
      * @return void
      */
